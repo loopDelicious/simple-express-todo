@@ -1,14 +1,17 @@
+require("dotenv").config();
+
+const pm = require("@postman/postman-sdk");
+
+pm.initialize({
+  collectionId: "13191452-57207673-27a0-413b-b50d-37f7973752b4",
+  apiKey: process.env.POSTMAN_API_KEY || null,
+  truncateData: false,
+});
+
 // require dependencies so they can be used throughout this code
 const express = require("express");
 const bodyParser = require("body-parser");
 const serveStatic = require("serve-static");
-const pm = require("@postman/postman-sdk");
-require("dotenv").config();
-
-pm.initialize({
-  collectionId: "13191452-fbfa557b-c248-480d-a57a-e1a4bcb0ab6c",
-  apiKey: process.env.POSTMAN_API_KEY || null,
-});
 
 // initialize Express.js server and save as a variable
 // so it can be referred to as `app`
@@ -16,16 +19,17 @@ const app = express();
 
 app.use(bodyParser.json());
 app.use(serveStatic("public"));
+
 let todos = []; // In-memory storage for todos
 
 // GET endpoint to fetch all todo items
-app.get("/todos", (req, res) => {
+app.get("/", (req, res) => {
   res.json(todos);
 });
 
 // POST endpoint to create a new todo item
 // provide `title` and optionally `completed` in the request body as JSON
-app.post("/todos", (req, res) => {
+app.post("/", (req, res) => {
   const todo = {
     id: todos.length + 1,
     title: req.body.title,
@@ -37,7 +41,7 @@ app.post("/todos", (req, res) => {
 
 // PUT endpiont to update an existing todo item with the specified `id`
 // provide updated `title` and/or `completed` in the request body as JSON
-app.put("/todos/:id", (req, res) => {
+app.put("/:id", (req, res) => {
   const id = parseInt(req.params.id);
   const todo = todos.find((t) => t.id === id);
   if (!todo) {
@@ -49,7 +53,7 @@ app.put("/todos/:id", (req, res) => {
 });
 
 // DELETE endpoint to remove an existing todo item with the specified `id`
-app.delete("/todos/:id", (req, res) => {
+app.delete("/:id", (req, res) => {
   const id = parseInt(req.params.id);
   const index = todos.findIndex((t) => t.id === id);
   if (index === -1) {

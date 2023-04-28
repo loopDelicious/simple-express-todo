@@ -4,114 +4,164 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Todo App</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            max-width: 800px;
-            margin: auto;
-        }
-        .todo {
-            display: flex;
-            justify-content: space-between;
-            margin-bottom: 10px;
-        }
-        .completed {
-            text-decoration: line-through;
-        }
-    </style>
+    <link rel="stylesheet" href="css/base.css">
+    <link rel="stylesheet" href="css/index.css">
 </head>
 <body>
-    <h1>Todo App</h1>
-    <form id="todo-form">
-        <input type="text" id="todo-input" placeholder="Enter a new todo">
-        <button type="submit">Add</button>
-    </form>
-    <div id="todo-list"></div>
-    
+
+    <section class="todoapp">
+        <header class="header">
+          <h1>todos</h1>
+          <input class="new-todo" placeholder="What needs to be done?" autofocus>
+        </header>
+        <section class="main">
+          <ul class="todo-list"></ul>
+        </section>
+        <footer class="footer">
+          <span class="todo-count"></span>
+          <ul class="filters">
+            <li>
+              <a href="#/" class="selected">All</a>
+            </li>
+            <li>
+              <a href="#/active">Active</a>
+            </li>
+            <li>
+              <a href="#/completed">Completed</a>
+            </li>
+          </ul>
+          <button class="clear-completed">Clear completed</button>
+        </footer>
+      </section>
+
     <script>
-        const API_URL = "http://localhost:3000/todos";
 
-        const todoForm = document.getElementById("todo-form");
-        const todoInput = document.getElementById("todo-input");
-        const todoList = document.getElementById("todo-list");
-
-        todoForm.addEventListener("submit", async (e) => {
-            e.preventDefault();
-            const title = todoInput.value.trim();
-            if (title) {
-                const todo = { title };
-                await createTodo(todo);
-                todoInput.value = "";
-                loadTodos();
+        // Define the application state
+        const state = {
+            todos: [],
+            filter: 'all'
+        };
+        
+        // Define a function to render the list of todos
+        function renderTodos() {
+        const todoList = document.querySelector('.todo-list');
+        todoList.innerHTML = '';
+        state.todos.forEach(todo => {
+            const todoItem = document.createElement('li');
+            todoItem.innerHTML = `
+            <div class="view">
+                <input class="toggle" type="checkbox">
+                <label>${todo.title}</label>
+                <button class="destroy"></button>
+            </div>
+            `;
+            todoItem.setAttribute('data-id', todo.id);
+            const toggleInput = todoItem.querySelector('.toggle');
+            toggleInput.checked = todo.completed;
+            todoList.appendChild(todoItem);
+        });
+        }
+        
+        // Define a function to update the count of remaining todos
+        function updateTodoCount() {
+        const todoCount = document.querySelector('.todo-count');
+        const count = state.todos.filter(todo => !todo.completed).length;
+        const itemText = count === 1 ? 'item' : 'items';
+        todoCount.textContent = `${count} ${itemText} left`;
+        }
+        
+        // Define a function to update the visibility of the "Clear completed" button
+        function updateClearCompletedButton() {
+        const clearCompleted = document.querySelector('.clear-completed');
+        const completedCount = state.todos.filter(todo => todo.completed).length;
+        if (completedCount === 0) {
+            clearCompleted.classList.add('hidden');
+        } else {
+            clearCompleted.classList.remove('hidden');
+        }
+        }
+        
+        // Define a function to update the list of todos based on the selected filter
+        function updateFilter(filter) {
+        const filters = document.querySelector('.filters');
+        filters.querySelector('.selected').classList.remove('selected');
+        filters.querySelector(`[href="#/${filter}"]`).classList.add('selected');
+        const todoItems = document.querySelectorAll('.todo-list li');
+        todoItems.forEach(todoItem => {
+            todoItem.classList.remove('hidden');
+            if (filter === 'active' && todoItem.querySelector('.toggle').checked) {
+            todoItem.classList.add('hidden');
+            } else if (filter === 'completed' && !todoItem.querySelector('.toggle').checked) {
+            todoItem.classList.add('hidden');
             }
         });
-
-        async function loadTodos() {
-            const todos = await fetchTodos();
-            renderTodos(todos);
+        }
+        
+        // Define a function to add a new
+        function addTodo() {
+        const newTodoInput = document.querySelector('.new-todo');
+        const newTodoTitle = newTodoInput.value.trim();
+        if (newTodoTitle) {
+        const newTodo = {
+        id: Date.now(),
+        title: newTodoTitle,
+        completed: false
+        };
+        state.todos.push(newTodo);
+        newTodoInput.value = '';
+        renderTodos();
+        updateTodoCount();
+        updateClearCompletedButton();
+        }
         }
 
-        async function fetchTodos() {
-            const response = await fetch(API_URL);
-            const todos = await response.json();
-            return todos;
+        // Define a function to remove a todo
+        function removeTodo(id) {
+        state.todos = state.todos.filter(todo => todo.id !== id);
+        renderTodos();
+        updateTodoCount();
+        updateClearCompletedButton();
         }
 
-        function renderTodos(todos) {
-            todoList.innerHTML = "";
-            todos.forEach((todo) => {
-                const todoElement = createTodoElement(todo);
-                todoList.appendChild(todoElement);
-            });
+        // Define a function to toggle the completed status of a todo
+        function toggleCompleted(id) {
+        const todo = state.todos.find(todo => todo.id === id);
+        todo.completed = !todo.completed;
+        renderTodos();
+        updateTodoCount();
+        updateClearCompletedButton();
         }
 
-        function createTodoElement(todo) {
-            const div = document.createElement("div");
-            div.classList.add("todo");
-            div.innerHTML = `
-                <span class="${todo.completed ? "completed" : ""}">${todo.title}</span>
-                <div>
-                    <button onclick="toggleCompleted(${todo.id})">${todo.completed ? "Uncomplete" : "Complete"}</button>
-                    <button onclick="deleteTodo(${todo.id})">Delete</button>
-                </div>
-            `;
-            return div;
+        // Add event listeners for user input
+        document.querySelector('.new-todo').addEventListener('keydown', event => {
+        if (event.key === 'Enter') {
+        addTodo();
         }
+        });
 
-        async function createTodo(todo) {
-            await fetch(API_URL, {
-                method: "POST",
-                body: JSON.stringify(todo),
-                headers: { "Content-Type": "application/json" },
-            });
+        document.querySelector('.todo-list').addEventListener('click', event => {
+        if (event.target.classList.contains('destroy')) {
+        const id = Number(event.target.parentNode.parentNode.getAttribute('data-id'));
+        removeTodo(id);
+        } else if (event.target.classList.contains('toggle')) {
+        const id = Number(event.target.parentNode.parentNode.getAttribute('data-id'));
+        toggleCompleted(id);
         }
+        });
 
-        async function toggleCompleted(id) {
-            const todo = await getTodo(id);
-            const updatedTodo = { ...todo, completed: !todo.completed };
-            await updateTodo(updatedTodo);
-            loadTodos();
+        document.querySelector('.filters').addEventListener('click', event => {
+        if (event.target.tagName.toLowerCase() === 'a') {
+        const filter = event.target.getAttribute('href').replace('#/', '');
+        state.filter = filter;
+        updateFilter(filter);
         }
+        });
 
-        async function deleteTodo(id) {
-            await fetch(`${API_URL}/${id}`, { method: "DELETE" });
-            loadTodos();
-        }
-
-        async function getTodo(id) {
-            const response = await fetch(`${API_URL}/${id}`);
-            const todo = await response.json();
-            return todo;
-        }
-
-        async function updateTodo(todo) {
-            await fetch(`${API_URL}/${todo.id}`, {
-                method: "PUT",
-                body: JSON.stringify(todo),
-                headers: { "Content-Type": "application/json" },
-            });
-        }
-
-        loadTodos;
+        // Initial rendering of the application
+        renderTodos();
+        updateTodoCount();
+        updateClearCompletedButton();
+        updateFilter(state.filter);
     </script>
+    <script src="js/base.js"></script>
 </body>
